@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices.ComTypes;
 using UnityEngine;
+using MIConvexHull;
 
 public class GraphController : MonoBehaviour
 {
@@ -20,18 +21,10 @@ public class GraphController : MonoBehaviour
             .Select(p => new Vertex() { Location = p })
             .ToList();
 
-        MIConvexHull.Triangulation.CreateDelaunay(vertices);
+        var faces = Triangulation.CreateDelaunay<Vertex, Face>(vertices);
+        var edges = faces.Cells.SelectMany(f => f.GetEdges());
 
-
-
-        var matrices = points.Select(p =>
-        {
-            var rotation = Quaternion.identity;
-            var scale = Vector3.one * 0.01f;
-            return Matrix4x4.TRS(p, rotation, scale);
-        });
-
-        SetMesh(matrices);
+        SetMeshFromEdges(edges);
     }
 
     void Update()
@@ -49,6 +42,30 @@ public class GraphController : MonoBehaviour
             return Matrix4x4.TRS(p, rotation, scale);
         });
 
+    }
+
+    void SetMeshFromEdges(IEnumerable<Edge> edges)
+    {
+        var matrices = edges.Select(e =>
+        {
+            var rotation = Quaternion.LookRotation(Vector3.forward, e.Vector);
+            var scale = new Vector3(0.01f, e.Length, 1f);
+            return Matrix4x4.TRS(e.MidPoint, rotation, scale);
+        });
+
+        SetMesh(matrices);
+    }
+
+    void SetMeshFromPoints(IEnumerable<Vector3> points)
+    {
+        var matrices = points.Select(p =>
+        {
+            var rotation = Quaternion.identity;
+            var scale = Vector3.one * 0.01f;
+            return Matrix4x4.TRS(p, rotation, scale);
+        });
+
+        SetMesh(matrices);
     }
 
     void SetMesh(IEnumerable<Matrix4x4> matrices)
