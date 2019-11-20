@@ -14,7 +14,15 @@ public class GraphController : MonoBehaviour
 
     void Start()
     {
-        var points = RandomPoints(1_000);
+        var points = RandomPoints(100);
+
+        var vertices = points
+            .Select(p => new Vertex() { Location = p })
+            .ToList();
+
+        MIConvexHull.Triangulation.CreateDelaunay(vertices);
+
+
 
         var matrices = points.Select(p =>
         {
@@ -22,6 +30,8 @@ public class GraphController : MonoBehaviour
             var scale = Vector3.one * 0.01f;
             return Matrix4x4.TRS(p, rotation, scale);
         });
+
+        SetMesh(matrices);
     }
 
     void Update()
@@ -41,10 +51,10 @@ public class GraphController : MonoBehaviour
 
     }
 
-    void SetMesh(List<Matrix4x4> matrices)
+    void SetMesh(IEnumerable<Matrix4x4> matrices)
     {
         var instances = matrices
-    .Select(m => new CombineInstance() { mesh = _mesh, transform = m });
+            .Select(m => new CombineInstance() { mesh = _mesh, transform = m });
 
         var mesh = new Mesh();
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
