@@ -25,8 +25,31 @@ public class GraphController : MonoBehaviour
         var triangulation = Triangulation.CreateDelaunay<Vertex, Face>(vertices);
         var edges = triangulation.Cells.SelectMany(f => f.GetEdges());
         edges = edges.Where(e => e.Length < 0.2f);
+        var edgeList = edges.ToList();
 
-        SetMeshFromEdges(edges);
+        SetMeshFromEdges(edgeList);
+        PaintEdges(edgeList);
+     
+    }
+
+    void PaintEdges(IList<Edge> edges)
+    {
+        var colors = new Color[edges.Count * 4];
+
+        for (int i = 0; i < edges.Count; i++)
+        {
+            var t = 1 - (edges[i].Length / 0.2f);
+            t = Mathf.Pow(t, 2.2f);
+
+            var color = Color.white * t;
+
+            for (int j = 0; j < 4; j++)
+            {
+                colors[i * 4 + j] = color;
+            }
+        }
+
+        _renderMesh.colors = colors;
     }
 
     void Update()
