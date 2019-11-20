@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices.ComTypes;
 using UnityEngine;
 using MIConvexHull;
 
@@ -15,14 +14,17 @@ public class GraphController : MonoBehaviour
 
     void Start()
     {
-        var points = RandomPoints(100);
+        Random.InitState(42);
+
+        var points = RandomPoints(400);
 
         var vertices = points
             .Select(p => new Vertex() { Location = p })
             .ToList();
 
-        var faces = Triangulation.CreateDelaunay<Vertex, Face>(vertices);
-        var edges = faces.Cells.SelectMany(f => f.GetEdges());
+        var triangulation = Triangulation.CreateDelaunay<Vertex, Face>(vertices);
+        var edges = triangulation.Cells.SelectMany(f => f.GetEdges());
+        edges = edges.Where(e => e.Length < 0.2f);
 
         SetMeshFromEdges(edges);
     }
@@ -49,7 +51,7 @@ public class GraphController : MonoBehaviour
         var matrices = edges.Select(e =>
         {
             var rotation = Quaternion.LookRotation(Vector3.forward, e.Vector);
-            var scale = new Vector3(0.01f, e.Length, 1f);
+            var scale = new Vector3(0.002f, e.Length, 1f);
             return Matrix4x4.TRS(e.MidPoint, rotation, scale);
         });
 
