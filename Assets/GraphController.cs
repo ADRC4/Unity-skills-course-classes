@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using MIConvexHull;
+using QuickGraph;
+using QuickGraph.Algorithms;
+
 
 public class GraphController : MonoBehaviour
 {
@@ -23,13 +26,38 @@ public class GraphController : MonoBehaviour
             .ToList();
 
         var triangulation = Triangulation.CreateDelaunay<Vertex, Face>(vertices);
+        var edges = triangulation.Cells.SelectMany(f => f.GetEdges())
+            .Distinct()
+            .Where(e => e.Length < 0.2f);
+
+        var edgeList = edges.ToList();
+        var graph = edgeList.ToUndirectedGraph<Vertex, Edge>();
+        var tree = graph.MinimumSpanningTreePrim(GetWeight).ToList();
+
+        SetMeshFromEdges(tree);
+        PaintEdges(tree);
+    }
+
+    double GetWeight(Edge edge)
+    {
+        return (edge.Target.Location - edge.Source.Location).magnitude;
+    }
+
+    void BunnyEdges()
+    {
+        var points = RandomPoints(400);
+
+        var vertices = points
+            .Select(p => new Vertex() { Location = p })
+            .ToList();
+
+        var triangulation = Triangulation.CreateDelaunay<Vertex, Face>(vertices);
         var edges = triangulation.Cells.SelectMany(f => f.GetEdges());
         edges = edges.Where(e => e.Length < 0.2f);
         var edgeList = edges.ToList();
 
         SetMeshFromEdges(edgeList);
         PaintEdges(edgeList);
-     
     }
 
     void PaintEdges(IList<Edge> edges)
@@ -44,9 +72,7 @@ public class GraphController : MonoBehaviour
             var color = Color.white * t;
 
             for (int j = 0; j < 4; j++)
-            {
                 colors[i * 4 + j] = color;
-            }
         }
 
         _renderMesh.colors = colors;
