@@ -10,6 +10,7 @@ class Edge : IEdge<Vertex>, IEquatable<Edge>
     public Vector3 MidPoint => (Source.Location + Target.Location) * 0.5f;
     public Vector3 Vector => Target.Location - Source.Location;
     public float Length => Vector.magnitude;
+    public float Value = 0;
 
     public bool Equals(Edge other)
     {

@@ -5,7 +5,7 @@ using UnityEngine;
 using MIConvexHull;
 using QuickGraph;
 using QuickGraph.Algorithms;
-
+using QuickGraph.Algorithms.Search;
 
 public class GraphController : MonoBehaviour
 {
@@ -18,7 +18,53 @@ public class GraphController : MonoBehaviour
     void Start()
     {
         Random.InitState(42);
+        StartCoroutine(DepthFirstSearchAnimated());
+    }
 
+
+    IEnumerator DepthFirstSearchAnimated()
+    {
+        var points = RandomPoints(400);
+
+        var vertices = points
+            .Select(p => new Vertex() { Location = p })
+            .ToList();
+
+        var triangulation = Triangulation.CreateDelaunay<Vertex, Face>(vertices);
+        var edges = triangulation.Cells.SelectMany(f => f.GetEdges())
+            .Distinct()
+            .Where(e => e.Length < 0.2f);
+
+        var edgeList = edges.ToList();
+
+        SetMeshFromEdges(edgeList);
+
+        var graph = edgeList.ToUndirectedGraph<Vertex, Edge>();
+
+        var sequence = new List<Edge>();
+
+        var s = new UndirectedDepthFirstSearchAlgorithm<Vertex, Edge>(graph);
+        s.ExamineEdge += (o, e) => sequence.Add(e.Edge);
+        s.Compute(graph.Vertices.First());
+
+        foreach (var edge in edgeList)
+            edge.Value = 0.3f;
+
+        foreach (var edge in sequence)
+        {
+            edge.Value = 1;
+            PaintEdges(edgeList);
+            yield return new WaitForSeconds(0.05f);
+        }
+    }
+
+    double GetWeight(Edge edge)
+    {
+        return (edge.Target.Location - edge.Source.Location).magnitude;
+    }
+
+    void SpanningTree()
+    {
         var points = RandomPoints(400);
 
         var vertices = points
@@ -34,13 +80,15 @@ public class GraphController : MonoBehaviour
         var graph = edgeList.ToUndirectedGraph<Vertex, Edge>();
         var tree = graph.MinimumSpanningTreePrim(GetWeight).ToList();
 
-        SetMeshFromEdges(tree);
-        PaintEdges(tree);
-    }
 
-    double GetWeight(Edge edge)
-    {
-        return (edge.Target.Location - edge.Source.Location).magnitude;
+        foreach (var edge in edgeList)
+            edge.Value = 0.3f;
+
+        foreach (var edge in tree)
+            edge.Value = 1.0f;
+
+        SetMeshFromEdges(edgeList);
+        PaintEdges(edgeList);
     }
 
     void BunnyEdges()
@@ -66,10 +114,11 @@ public class GraphController : MonoBehaviour
 
         for (int i = 0; i < edges.Count; i++)
         {
-            var t = 1 - (edges[i].Length / 0.2f);
+            var t = edges[i].Value;
             t = Mathf.Pow(t, 2.2f);
 
-            var color = Color.white * t;
+            var color = Color.white;
+            color.a = t;
 
             for (int j = 0; j < 4; j++)
                 colors[i * 4 + j] = color;
